@@ -1,6 +1,7 @@
 name = UUID Menu Links
-description = Provides UUID values for menu links.
+description = Overrides menus such as (e.g. node/%node) allowing for entities to be loaded using UUID values.
 core = 7.x
+version = 7.x-1.x
 
 dependencies[] = menu
 dependencies[] = uuid

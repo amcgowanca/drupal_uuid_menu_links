@@ -3,12 +3,24 @@
  * @file
  */
 
+/**
+ * Implements hook_menu_alter().
+ */
 function uuid_menu_links_menu_alter(&$menu) {
   $node_menu = $menu['node/%node'];
   unset($menu['node/%node']);
   $menu['node/%uuid_menu_links_universal_node'] = $node_menu;
 }
 
+/**
+ * Load hook for %uuid_menu_links_universal_node menu token.
+ *
+ * @param string $identifier
+ *   The identifier of the node to load, either a UUID or node id.
+ *
+ * @return object
+ *   Returns the single loaded node by the $identifier if exists, otherwise false.
+ */
 function uuid_menu_links_universal_node_load($identifier = NULL) {
   $override_type = &drupal_static('menu_object_load_type_override', NULL);
   $override_type = 'uuid_menu_links_universal_node';
@@ -21,6 +33,9 @@ function uuid_menu_links_universal_node_load($identifier = NULL) {
   return $node;
 }
 
+/**
+ * Implements hook_entity_insert().
+ */
 function uuid_menu_links_entity_insert($entity, $entity_type) {
   if (empty($entity->uuid)) {
     return;
@@ -33,6 +48,9 @@ function uuid_menu_links_entity_insert($entity, $entity_type) {
   }
 }
 
+/**
+ * Implements hook_entity_update().
+ */
 function uuid_menu_links_entity_update($entity, $entity_type) {
   if (empty($entity->uuid)) {
     return;
@@ -45,6 +63,12 @@ function uuid_menu_links_entity_update($entity, $entity_type) {
   }
 }
 
+/**
+ * Updates a node's menu link to contain the UUID instead of NID.
+ *
+ * @param object $node
+ *   The node object to update the menu link for.
+ */
 function _uuid_menu_links_node_menu_link_update($node) {
   if (!empty($node->menu) && isset($node->menu['link_path'])) {
     $link_path = explode('/', $node->menu['link_path']);
