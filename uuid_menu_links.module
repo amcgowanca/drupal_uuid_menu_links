@@ -1,0 +1,56 @@
+<?php
+/**
+ * @file
+ */
+
+function uuid_menu_links_menu_alter(&$menu) {
+  $node_menu = $menu['node/%node'];
+  unset($menu['node/%node']);
+  $menu['node/%uuid_menu_links_universal_node'] = $node_menu;
+}
+
+function uuid_menu_links_universal_node_load($identifier = NULL) {
+  $override_type = &drupal_static('menu_object_load_type_override', NULL);
+  $override_type = 'uuid_menu_links_universal_node';
+
+  $node = entity_uuid_load('node', array($identifier));
+  $node = !empty($node) && is_array($node) ? array_shift($node) : NULL;
+  if (empty($node)) {
+    $node = node_load($identifier);
+  }
+  return $node;
+}
+
+function uuid_menu_links_entity_insert($entity, $entity_type) {
+  if (empty($entity->uuid)) {
+    return;
+  }
+
+  switch ($entity_type) {
+    case 'node':
+      _uuid_menu_links_node_menu_link_update($entity);
+      break;
+  }
+}
+
+function uuid_menu_links_entity_update($entity, $entity_type) {
+  if (empty($entity->uuid)) {
+    return;
+  }
+
+  switch ($entity_type) {
+    case 'node':
+      _uuid_menu_links_node_menu_link_update($entity);
+       break;
+  }
+}
+
+function _uuid_menu_links_node_menu_link_update($node) {
+  if (!empty($node->menu) && isset($node->menu['link_path'])) {
+    $link_path = explode('/', $node->menu['link_path']);
+    if ('node' == $link_path[0] && $node->nid == $link_path[1]) {
+      $node->menu['link_path'] = 'node/' . $node->uuid;
+      menu_link_save($node->menu);
+    }
+  }
+}

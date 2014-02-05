@@ -1,0 +1,7 @@
+name = UUID Menu Links
+description = Provides UUID values for menu links.
+core = 7.x
+
+dependencies[] = menu
+dependencies[] = uuid
+dependencies[] = uuid_redirect

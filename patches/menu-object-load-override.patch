@@ -1,0 +1,16 @@
+diff --git a/includes/menu.inc b/includes/menu.inc
+index aef557a..3f7fb22 100644
+--- a/includes/menu.inc
++++ b/includes/menu.inc
+@@ -969,6 +969,11 @@ function _menu_link_translate(&$item, $translate = FALSE) {
+  *   See menu_get_item() for more on this. Defaults to the current path.
+  */
+ function menu_get_object($type = 'node', $position = 1, $path = NULL) {
++  $override_type = drupal_static('menu_object_load_type_override', NULL);
++  if (NULL !== $override_type && $type !== $override_type) {
++    $type = $override_type;
++  }
++
+   $router_item = menu_get_item($path);
+   if (isset($router_item['load_functions'][$position]) && !empty($router_item['map'][$position]) && $router_item['load_functions'][$position] == $type . '_load') {
+     return $router_item['map'][$position];
