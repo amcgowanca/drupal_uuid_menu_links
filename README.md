@@ -26,6 +26,12 @@ The patch that is provided within the patches directory of this project is used 
 
 This newly introduced global static value is used for simply the purpose of overriding the `node` default value. The `$type` parameter's value is used to determine whether or not the menu router's load function was for a particular menu argument to be loaded. By default, the node module implements the routing path as `node/%node` and therefore the load function used for loading of nodes is `node_load()` when `%node` is used within a menu routing path. Due to menu links being re-written to contain the UUID and `node_load` not being aware the UUID as an identifier, a special load function was required to be implemented that attempts to load a node. This load function is made known to Drupal by altering the `node/%node` routing path via the implementation of `hook_menu_alter(&$menu)`. The `$menu['node/%node']` menu routing path is removed and replaced with `$menu['node/%uuid_menu_links_universal_node']` and therefore making Drupal aware of the newly implemented load function named `uuid_menu_links_universal_node_load` for automatically loading nodes.
 
+Therefore as Drupal core's Node module heavily relies on the default value of the `$type` parameter in the `menu_get_object()` function, using the global static value, this module can override the default value (node) that the Drupal core's Node module heavily relies on allowing for correct evaluation of the line of code below when `menu_get_object()` is invoked with default parameter values.
+
+```
+if (isset($router_item['load_functions'][$position]) && !empty($router_item['map'][$position]) && $router_item['load_functions'][$position] == $type . '_load') {
+```
+
 ### License
 
 The UUID Menu Links is licensed under the [GNU General Public License](http://www.gnu.org/licenses/gpl-2.0.html) version 2.
