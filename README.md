@@ -22,7 +22,9 @@ Therefore, this module attempts to solve the problem described above by:
 
 #### Why is Drupal core requiring a patch?
 
-TODO: Write explanation here as to why.
+The patch that is provided within the patches directory of this project is used to introduce a "global" static value that is used within to override the `$type` parameter of the `menu_get_object()` function. The `$type` parameter has a default value of `node` and as a result, the Drupal core Node module relies heavily on this default value when invoking the `menu_get_object()` function. The override global static value is implemented using the `drupal_static()` function with the identifier of `menu_object_load_type_override`.
+
+This newly introduced global static value is used for simply the purpose of overriding the `node` default value. The `$type` parameter's value is used to determine whether or not the menu router's load function was for a particular menu argument to be loaded. By default, the node module implements the routing path as `node/%node` and therefore the load function used for loading of nodes is `node_load()` when `%node` is used within a menu routing path. Due to menu links being re-written to contain the UUID and `node_load` not being aware the UUID as an identifier, a special load function was required to be implemented that attempts to load a node. This load function is made known to Drupal by altering the `node/%node` routing path via the implementation of `hook_menu_alter(&$menu)`. The `$menu['node/%node']` menu routing path is removed and replaced with `$menu['node/%uuid_menu_links_universal_node']` and therefore making Drupal aware of the newly implemented load function named `uuid_menu_links_universal_node_load` for automatically loading nodes.
 
 ### License
 
