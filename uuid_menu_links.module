@@ -4,6 +4,23 @@
  */
 
 /**
+ * Implements hook_views_api().
+ */
+function uuid_menu_links_views_api($module = NULL, $api = NULL) {
+  return array("api" => "3.0");
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter().
+ */
+function uuid_menu_links_form_menu_edit_item_alter(&$form, &$form_state, $form_id) {
+  if (!empty($form['link_path'])) {
+    $form['link_path']['#description'] .= '<br />' . t('You can also use UUID for node and taxonomy term urls. ie. node/CONTENT_UUID and taxonomy/term/TERM_UUID.');
+    $form['link_path']['#description'] .= ' ' . t('See <a href="@uuid_content_page">UUID content list page</a> and <a href="@uuid_taxonomy_page">UUID taxonomy list page</a> to find the UUID for given entities.', array('@uuid_content_page' => url('admin/content/content-uuid'), '@uuid_taxonomy_page' => url('admin/structure/taxonomy/taxonomy_uuid')));
+  }
+}
+
+/**
  * Implements hook_menu_alter().
  */
 function uuid_menu_links_menu_alter(&$menu) {

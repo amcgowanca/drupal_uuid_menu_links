@@ -8,3 +8,4 @@ dependencies[] = path
 dependencies[] = taxonomy
 dependencies[] = uuid
 dependencies[] = uuid_redirect
+dependencies[] = views
