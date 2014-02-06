@@ -34,6 +34,27 @@ if (isset($router_item['load_functions'][$position]) && !empty($router_item['map
 
 Similarily this is also the case for taxonomy terms, in which Drupal core's taxonomy module passes to the `menu_get_object()` the `$type` paramater value of `taxonomy_term`. Perhaps there are more within Drupal core that I have yet to discover (or write here), but question is whether or not Drupal 7's current implementation of how `menu_get_object()` is actually accurate or implemented in the best possible way that will allow developers to overwrite menu items like `$menu['node/%node']` or `$menu['taxonomy/term/%taxonomy_term']` and allow the `$router_item['load_functions'][$position] == $type . '_load'` to be evaluated correctly.
 
+#### The Patch and newly introduced Hook
+
+The patch provided introduces a new alter hook defined as such:
+
+```
+function hook_menu_get_object_load_type_alter(&$type, $original_type) {
+  switch ($original_type) {
+    case 'node':
+      if ('node' == arg(0)) {
+        // Sets the custom menu routing token that is found within the
+        // the menu by overriding the `node/%node` with `node/%mymodule_node_new`.
+        // Therefore the module implementing this override in the menu routing should
+        // also implement the function `mymodule_node_new_load` in which is used for
+        // "autoloading" the node object for the page callback.
+        $type = 'mymodule_node_new';
+      }
+      break;
+  }
+}
+```
+
 ### License
 
 The UUID Menu Links is licensed under the [GNU General Public License](http://www.gnu.org/licenses/gpl-2.0.html) version 2.
