@@ -20,6 +20,24 @@ function uuid_menu_links_menu_alter(&$menu) {
 }
 
 /**
+ * Implements hook_menu_get_object_load_type_alter().
+ */
+function uuid_menu_links_menu_get_object_load_type_alter(&$type, $original_type) {
+  switch ($original_type) {
+    case 'node':
+      if ('node' == arg(0)) {
+        $type = 'uuid_menu_links_universal_node';
+      }
+      break;
+    case 'taxonomy_term':
+      if ('taxonomy' == arg(0) && 'term' == arg(1)) {
+        $type = 'uuid_menu_links_universal_taxonomy_term';
+      }
+      break;
+  }
+}
+
+/**
  * Load hook for %uuid_menu_links_universal_node menu token.
  *
  * @param string $identifier
@@ -29,11 +47,7 @@ function uuid_menu_links_menu_alter(&$menu) {
  *   Returns the single loaded node by the $identifier if exists, otherwise false.
  */
 function uuid_menu_links_universal_node_load($identifier = NULL) {
-  if ('node' == arg(0)) {
-    $override_type = &drupal_static('menu_object_load_type_override', NULL);
-    $override_type['original'] = 'node';
-    $override_type['new'] = 'uuid_menu_links_universal_node';
-  }
+
 
   $node = entity_uuid_load('node', array($identifier));
   $node = !empty($node) && is_array($node) ? reset($node) : NULL;
@@ -53,11 +67,7 @@ function uuid_menu_links_universal_node_load($identifier = NULL) {
  *   Returns the single loaded term by the $identifier if exists, otherwise false.
  */
 function uuid_menu_links_universal_taxonomy_term_load($identifier = NULL) {
-  if ('taxonomy' == arg(0) && 'term' == arg(1)) {
-    $override_type = &drupal_static('menu_object_load_type_override', NULL);
-    $override_type['original'] = 'taxonomy_term';
-    $override_type['new'] = 'uuid_menu_links_universal_taxonomy_term';
-  }
+
 
   $taxonomy_term = entity_uuid_load('node', array($identifier));
   $taxonomy_term = !empty($taxonomy_term) && is_array($taxonomy_term) ? reset($taxonomy_term) : NULL;
@@ -176,3 +186,4 @@ function _uuid_menu_links_menu_load_token_map() {
     'taxonomy/term/%taxonomy_term' => 'taxonomy/term/%uuid_menu_links_universal_taxonomy_term',
   );
 }
+
