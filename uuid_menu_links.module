@@ -7,9 +7,16 @@
  * Implements hook_menu_alter().
  */
 function uuid_menu_links_menu_alter(&$menu) {
-  $node_menu = $menu['node/%node'];
-  unset($menu['node/%node']);
-  $menu['node/%uuid_menu_links_universal_node'] = $node_menu;
+  $original_menu = $menu;
+  foreach ($original_menu as $routing_path => $menu_item) {
+    foreach (_uuid_menu_links_menu_load_token_map() as $original => $new) {
+      if (0 === strpos($routing_path, $original)) {
+        $new_routing_path = str_replace($original, $new, $routing_path);
+        $menu[$new_routing_path] = $menu_item;
+        unset($menu[$routing_path]);
+      }
+    }
+  }
 }
 
 /**
@@ -22,15 +29,42 @@ function uuid_menu_links_menu_alter(&$menu) {
  *   Returns the single loaded node by the $identifier if exists, otherwise false.
  */
 function uuid_menu_links_universal_node_load($identifier = NULL) {
-  $override_type = &drupal_static('menu_object_load_type_override', NULL);
-  $override_type = 'uuid_menu_links_universal_node';
+  if ('node' == arg(0)) {
+    $override_type = &drupal_static('menu_object_load_type_override', NULL);
+    $override_type['original'] = 'node';
+    $override_type['new'] = 'uuid_menu_links_universal_node';
+  }
 
   $node = entity_uuid_load('node', array($identifier));
-  $node = !empty($node) && is_array($node) ? array_shift($node) : NULL;
+  $node = !empty($node) && is_array($node) ? reset($node) : NULL;
   if (empty($node)) {
     $node = node_load($identifier);
   }
   return $node;
+}
+
+/**
+ * Load hook for %uuid_menu_links_universal_taxonomy_term menu token.
+ *
+ * @param string $identifier
+ *   The identifier of the taxonomy term to load, either UUID or TID.
+ *
+ * @return object
+ *   Returns the single loaded term by the $identifier if exists, otherwise false.
+ */
+function uuid_menu_links_universal_taxonomy_term_load($identifier = NULL) {
+  if ('taxonomy' == arg(0) && 'term' == arg(1)) {
+    $override_type = &drupal_static('menu_object_load_type_override', NULL);
+    $override_type['original'] = 'taxonomy_term';
+    $override_type['new'] = 'uuid_menu_links_universal_taxonomy_term';
+  }
+
+  $taxonomy_term = entity_uuid_load('node', array($identifier));
+  $taxonomy_term = !empty($taxonomy_term) && is_array($taxonomy_term) ? reset($taxonomy_term) : NULL;
+  if (empty($taxonomy_term)) {
+    $taxonomy_term = taxonomy_term_load($identifier);
+  }
+  return $taxonomy_term;
 }
 
 /**
@@ -59,8 +93,22 @@ function uuid_menu_links_entity_update($entity, $entity_type) {
   switch ($entity_type) {
     case 'node':
       _uuid_menu_links_node_menu_link_update($entity);
-       break;
+      break;
   }
+}
+
+/**
+ * Implements hook_path_insert().
+ */
+function uuid_menu_links_path_insert($path) {
+  _uuid_menu_links_path_save($path);
+}
+
+/**
+ * Implements hook_path_update().
+ */
+function uuid_menu_links_path_update($path) {
+  _uuid_menu_links_path_save($path);
 }
 
 /**
@@ -77,4 +125,54 @@ function _uuid_menu_links_node_menu_link_update($node) {
       menu_link_save($node->menu);
     }
   }
+}
+
+/**
+ * Handles parsing and re-saving of any paths requiring a UUID.
+ *
+ * @param array $path
+ *   The path to resave.
+ */
+function _uuid_menu_links_path_save($path) {
+  $source = explode('/', $path['source']);
+  if (empty($source)) {
+    return;
+  }
+
+  switch ($source[0]) {
+    case 'node':
+      if (isset($source[1]) && is_numeric($source[1])) {
+        $nid = $source[1];
+        $node = node_load($nid);
+        if (!empty($node->uuid)) {
+          $path['source'] = 'node/' . $node->uuid;
+          path_save($path);
+        }
+      }
+      break;
+
+    case 'taxonomy':
+      if (isset($source[1]) && 'term' == $source[1]) {
+        $tid = $source[2];
+        $term = taxonomy_term_load($tid);
+        if (!empty($term->uuid)) {
+          $path['source'] = 'taxonomy/term/' . $term->uuid;
+          path_save($path);
+        }
+      }
+      break;
+  } // end switch ($source[0]).
+}
+
+/**
+ * Returns a map of menu routing elements to be re-written.
+ *
+ * @return array
+ *   Returns the map of routing pieces, original => new.
+ */
+function _uuid_menu_links_menu_load_token_map() {
+  return array(
+    'node/%node' => 'node/%uuid_menu_links_universal_node',
+    'taxonomy/term/%taxonomy_term' => 'taxonomy/term/%uuid_menu_links_universal_taxonomy_term',
+  );
 }

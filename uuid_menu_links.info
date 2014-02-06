@@ -4,5 +4,7 @@ core = 7.x
 version = 7.x-1.x
 
 dependencies[] = menu
+dependencies[] = path
+dependencies[] = taxonomy
 dependencies[] = uuid
 dependencies[] = uuid_redirect
