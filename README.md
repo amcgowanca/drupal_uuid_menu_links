@@ -4,13 +4,13 @@ Allows for entities (e.g. nodes) to be loaded and handled with their UUIDs provi
 
 ### Installation
 
-### Common Installation
+#### Common Installation
 
 * Download the module and place within the `sites/all/modules` directory.
 * Using the `menu_get_object-load-type-alter.patch` file found within the patches directory, patch Drupal core's `includes/menu.inc` file.
 * Install the module either via the Administration or by using Drush, `drush en uuid_menu_links`.
 
-### As part of Drush Make
+#### As part of Drush Make
 
 This project can be downloaded and used within a Drush make file like any other contributed module. The difference is that this module exists on GitHub instead of Drupal.org. Within your `drupal-org.make`, the UUID Menu Links module can be defined as a project. This is done with:
 
