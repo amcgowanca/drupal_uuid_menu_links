@@ -32,6 +32,8 @@ Therefore as Drupal core's Node module heavily relies on the default value of th
 if (isset($router_item['load_functions'][$position]) && !empty($router_item['map'][$position]) && $router_item['load_functions'][$position] == $type . '_load') {
 ```
 
+Similarily this is also the case for taxonomy terms, in which Drupal core's taxonomy module passes to the `menu_get_object()` the `$type` paramater value of `taxonomy_term`. Perhaps there are more within Drupal core that I have yet to discover (or write here), but question is whether or not Drupal 7's current implementation of how `menu_get_object()` is actually accurate or implemented in the best possible way that will allow developers to overwrite menu items like `$menu['node/%node']` or `$menu['taxonomy/term/%taxonomy_term']` and allow the `$router_item['load_functions'][$position] == $type . '_load'` to be evaluated correctly.
+
 ### License
 
 The UUID Menu Links is licensed under the [GNU General Public License](http://www.gnu.org/licenses/gpl-2.0.html) version 2.
