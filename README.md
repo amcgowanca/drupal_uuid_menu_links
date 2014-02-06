@@ -5,7 +5,7 @@ Allows for entities (e.g. nodes) to be loaded and handled with their UUIDs provi
 #### Installation
 
 * Download the module and place within the `sites/all/modules` directory.
-* Using the `menu-object-load-override.patch` file found within the patches directory, patch Drupal core's `includes/menu.inc` file.
+* Using the `menu_get_object-load-type-alter.patch` file found within the patches directory, patch Drupal core's `includes/menu.inc` file.
 * Install the module either via the Administration or by using Drush, `drush en uuid_menu_links`.
 
 #### The Problem
