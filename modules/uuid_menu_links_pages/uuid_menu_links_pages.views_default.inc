@@ -1,25 +1,25 @@
 <?php
 /**
  * @file
- * uuid_menu_links.views_default.inc
+ * uuid_menu_links_pages.views_default.inc
  */
 
 /**
  * Implements hook_views_default_views().
  */
-function uuid_menu_links_views_default_views() {
+function uuid_menu_links_pages_views_default_views() {
   $export = array();
 
   $view = new view();
-  $view->name = 'content_uuid';
+  $view->name = 'node_uuid';
   $view->description = 'Displays content with there node ID & UUID';
   $view->tag = 'default';
   $view->base_table = 'node';
-  $view->human_name = 'content_uuid';
+  $view->human_name = 'node_uuid';
   $view->core = 7;
   $view->api_version = '3.0';
   $view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
-  
+
   /* Display: Master */
   $handler = $view->new_display('default', 'Master', 'default');
   $handler->display->display_options['title'] = 'Content UUIDs';
@@ -134,7 +134,7 @@ function uuid_menu_links_views_default_views() {
     6 => 0,
     4 => 0,
   );
-  
+
   /* Display: Page */
   $handler = $view->new_display('page', 'Page', 'page');
   $handler->display->display_options['path'] = 'admin/content/content-uuid';
@@ -144,8 +144,8 @@ function uuid_menu_links_views_default_views() {
   $handler->display->display_options['menu']['weight'] = '0';
   $handler->display->display_options['menu']['context'] = 0;
   $handler->display->display_options['menu']['context_only_inline'] = 0;
-  $export['content_uuid'] = $view;
-  
+  $export['node_uuid'] = $view;
+
   $view = new view();
   $view->name = 'taxonomy_uuid';
   $view->description = '';
@@ -155,7 +155,7 @@ function uuid_menu_links_views_default_views() {
   $view->core = 7;
   $view->api_version = '3.0';
   $view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
-  
+
   /* Display: Master */
   $handler = $view->new_display('default', 'Master', 'default');
   $handler->display->display_options['title'] = 'Taxonomy UUIDs';
@@ -242,7 +242,7 @@ function uuid_menu_links_views_default_views() {
     6 => 0,
     4 => 0,
   );
-  
+
   /* Display: Page */
   $handler = $view->new_display('page', 'Page', 'page');
   $handler->display->display_options['path'] = 'admin/structure/taxonomy/taxonomy_uuid';
@@ -251,9 +251,9 @@ function uuid_menu_links_views_default_views() {
   $handler->display->display_options['menu']['description'] = 'UUIDs for taxonomy terms';
   $handler->display->display_options['menu']['weight'] = '0';
   $handler->display->display_options['menu']['context'] = 0;
-  $handler->display->display_options['menu']['context_only_inline'] = 0;  
+  $handler->display->display_options['menu']['context_only_inline'] = 0;
   $export['taxonomy_uuid'] = $view;
-  
+
   features_alter_code('views_view', $export);
 
   return $export;
