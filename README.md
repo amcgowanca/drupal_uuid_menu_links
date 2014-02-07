@@ -81,6 +81,10 @@ function hook_menu_get_object_load_type_alter(&$type, $original_type) {
 }
 ```
 
+### UUID Menu Links and Pathauto
+
+It is not untypical for many developers to leverage the power of Drupal 7's contributed module [Pathauto](http://drupal.org/project/pathauto). When first installing UUID Menu Links where pathauto is already installed, you will notice that on each new path creation a duplicated entry will get created due to the alias already existing but not the source as the source path is altered to contained the UUID.
+
 ### License
 
 The UUID Menu Links is licensed under the [GNU General Public License](http://www.gnu.org/licenses/gpl-2.0.html) version 2.
