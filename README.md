@@ -83,7 +83,9 @@ function hook_menu_get_object_load_type_alter(&$type, $original_type) {
 
 ### UUID Menu Links and Pathauto
 
-It is not untypical for many developers to leverage the power of Drupal 7's contributed module [Pathauto](http://drupal.org/project/pathauto). When first installing UUID Menu Links where pathauto is already installed, you will notice that on each new path creation a duplicated entry will get created due to the alias already existing but not the source as the source path is altered to contained the UUID.
+It is not untypical for many developers to leverage the power of Drupal 7's contributed module [Pathauto](http://drupal.org/project/pathauto) as part of a site build. Using the UUID Menu Links module in conjunction with Pathauto you will soon see that there is a problem. This is due to UUID Menu Links re-writing the source path of URL aliases and as a result, when Pathauto attempts to locate existing paths using the standard non-portable source path, Pathauto will actually create a duplicate entry. While Pathauto provides the `hook_pathauto_alias_alter()` hook which allows for the source to be altered via `$context['source']` (the second parameter of the alter hook, passed by reference) it is invoked after the `_pathauto_existing_alias_data()` function that uses the `$source` of an alias to find an existing path. Due to this, a simple patch is required to allow for the `$source` parameter of `_pathauto_existing_alias_data()` to be altered prior to the database query execution.
+
+Available within the patches directory is a the [pathauto-existing_alias_source_alter-hook.patch](https://github.com/amcgowanca/drupal_uuid_menu_links/blob/7.x-1.x/patches/pathauto-existing_alias_source_alter-hook.patch) that introduces a new alter hook named `pathauto_existing_alias_source` implemented as `hook_pathauto_existing_alias_source_alter()`. This hook is implemented within the UUID Menu Links module so that source paths with non-portable identifiers are transfered into those with UUID (e.g. `node/[nid]` => `node/[uuid]`).
 
 ### License
 
