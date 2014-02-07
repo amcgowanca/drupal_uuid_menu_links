@@ -1,0 +1,14 @@
+name = UUID Menu Links Pages
+description = UUID Menu Links submodule which provides admin pages listing entity UUIDs
+core = 7.x
+package = Features
+version = 7.x-1.x
+project = uuid_menu_links_pages
+dependencies[] = ctools
+dependencies[] = uuid
+dependencies[] = views
+features[ctools][] = views:views_default:3.0
+features[features_api][] = api:2
+features[views_view][] = node_uuid
+features[views_view][] = taxonomy_uuid
+features_exclude[dependencies][ctools] = ctools
