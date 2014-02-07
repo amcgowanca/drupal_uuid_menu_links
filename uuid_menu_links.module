@@ -29,6 +29,7 @@ function uuid_menu_links_menu_get_object_load_type_alter(&$type, $original_type)
         $type = 'uuid_menu_links_universal_node';
       }
       break;
+
     case 'taxonomy_term':
       if ('taxonomy' == arg(0) && 'term' == arg(1)) {
         $type = 'uuid_menu_links_universal_taxonomy_term';
@@ -47,8 +48,6 @@ function uuid_menu_links_menu_get_object_load_type_alter(&$type, $original_type)
  *   Returns the single loaded node by the $identifier if exists, otherwise false.
  */
 function uuid_menu_links_universal_node_load($identifier = NULL) {
-
-
   $node = entity_uuid_load('node', array($identifier));
   $node = !empty($node) && is_array($node) ? reset($node) : NULL;
   if (empty($node)) {
@@ -67,8 +66,6 @@ function uuid_menu_links_universal_node_load($identifier = NULL) {
  *   Returns the single loaded term by the $identifier if exists, otherwise false.
  */
 function uuid_menu_links_universal_taxonomy_term_load($identifier = NULL) {
-
-
   $taxonomy_term = entity_uuid_load('node', array($identifier));
   $taxonomy_term = !empty($taxonomy_term) && is_array($taxonomy_term) ? reset($taxonomy_term) : NULL;
   if (empty($taxonomy_term)) {
@@ -78,33 +75,17 @@ function uuid_menu_links_universal_taxonomy_term_load($identifier = NULL) {
 }
 
 /**
- * Implements hook_entity_insert().
+ * Implements hook_menu_link_insert().
  */
-function uuid_menu_links_entity_insert($entity, $entity_type) {
-  if (empty($entity->uuid)) {
-    return;
-  }
-
-  switch ($entity_type) {
-    case 'node':
-      _uuid_menu_links_node_menu_link_update($entity);
-      break;
-  }
+function uuid_menu_links_menu_link_insert($link) {
+  _uuid_menu_links_menu_link_save($link);
 }
 
 /**
- * Implements hook_entity_update().
+ * Implements hook_menu_link_update().
  */
-function uuid_menu_links_entity_update($entity, $entity_type) {
-  if (empty($entity->uuid)) {
-    return;
-  }
-
-  switch ($entity_type) {
-    case 'node':
-      _uuid_menu_links_node_menu_link_update($entity);
-      break;
-  }
+function uuid_menu_links_menu_link_update($link) {
+  _uuid_menu_links_menu_link_save($link);
 }
 
 /**
@@ -122,18 +103,35 @@ function uuid_menu_links_path_update($path) {
 }
 
 /**
- * Updates a node's menu link to contain the UUID instead of NID.
+ * Updates a menu link to contain the UUID instead of a non-portable identifier.
  *
- * @param object $node
- *   The node object to update the menu link for.
+ * @param array
+ *   The menu link to update.
  */
-function _uuid_menu_links_node_menu_link_update($node) {
-  if (!empty($node->menu) && isset($node->menu['link_path'])) {
-    $link_path = explode('/', $node->menu['link_path']);
-    if ('node' == $link_path[0] && $node->nid == $link_path[1]) {
-      $node->menu['link_path'] = 'node/' . $node->uuid;
-      menu_link_save($node->menu);
-    }
+function _uuid_menu_links_menu_link_save($link) {
+  $link_path = explode('/', $link['link_path']);
+  switch ($link_path[0]) {
+    case 'node':
+      if (isset($link_path[1]) && is_numeric($link_path[1])) {
+        $node = node_load($link_path[1]);
+        if (!empty($node->uuid)) {
+          $link_path[1] = $node->uuid;
+          $link['link_path'] = implode('/', $link_path);
+          menu_link_save($link);
+        }
+      }
+      break;
+
+    case 'taxonomy':
+      if (isset($link_path[1]) && 'term' == $link_path[1] && isset($link_path[2]) && is_numeric($link_path[2])) {
+        $taxonomy_term = taxonomy_term_load($link_path[2]);
+        if (!empty($taxonomy_term->uuid)) {
+          $link_path[2] = $taxonomy_term->uuid;
+          $link['link_path'] = implode('/', $link_path);
+          menu_link_save($link);
+        }
+      }
+      break;
   }
 }
 
@@ -152,21 +150,21 @@ function _uuid_menu_links_path_save($path) {
   switch ($source[0]) {
     case 'node':
       if (isset($source[1]) && is_numeric($source[1])) {
-        $nid = $source[1];
-        $node = node_load($nid);
+        $node = node_load($source[1]);
         if (!empty($node->uuid)) {
-          $path['source'] = 'node/' . $node->uuid;
+          $source[1] = $node->uuid;
+          $path['source'] = implode('/', $source);
           path_save($path);
         }
       }
       break;
 
     case 'taxonomy':
-      if (isset($source[1]) && 'term' == $source[1]) {
-        $tid = $source[2];
-        $term = taxonomy_term_load($tid);
-        if (!empty($term->uuid)) {
-          $path['source'] = 'taxonomy/term/' . $term->uuid;
+      if (isset($source[1]) && 'term' == $source[1] && isset($source[2]) && is_numeric($source[2])) {
+        $taxonomy_term = taxonomy_term_load($source[2]);
+        if (!empty($taxonomy_term->uuid)) {
+          $source[2] = $taxonomy_term->uuid;
+          $path['source'] = implode('/', $source);
           path_save($path);
         }
       }
