@@ -4,6 +4,18 @@
  */
 
 /**
+ * Implements hook_module_implements_alter().
+ */
+function uuid_menu_links_module_implements_alter(&$implementations, $hook) {
+  if ('menu_alter' === $hook) {
+    // Move UUID Menu Links `menu_alter` implementation to the bottom.
+    $group = $implementations['uuid_menu_links'];
+    unset($implementations['uuid_menu_links']);
+    $implementations['uuid_menu_links'] = $group;
+  }
+}
+
+/**
  * Implements hook_menu_alter().
  */
 function uuid_menu_links_menu_alter(&$menu) {
@@ -17,6 +29,34 @@ function uuid_menu_links_menu_alter(&$menu) {
       }
     }
   }
+}
+
+/**
+ * Implements hook_menu_link_insert().
+ */
+function uuid_menu_links_menu_link_insert($link) {
+  _uuid_menu_links_menu_link_save($link);
+}
+
+/**
+ * Implements hook_menu_link_update().
+ */
+function uuid_menu_links_menu_link_update($link) {
+  _uuid_menu_links_menu_link_save($link);
+}
+
+/**
+ * Implements hook_path_insert().
+ */
+function uuid_menu_links_path_insert($path) {
+  _uuid_menu_links_path_save($path);
+}
+
+/**
+ * Implements hook_path_update().
+ */
+function uuid_menu_links_path_update($path) {
+  _uuid_menu_links_path_save($path);
 }
 
 /**
@@ -36,6 +76,20 @@ function uuid_menu_links_menu_get_object_load_type_alter(&$type, $original_type)
       }
       break;
   }
+}
+
+/**
+ * Implements hook_pathauto_alias_alter().
+ */
+function uuid_menu_links_pathauto_alias_alter($alias, &$context) {
+  uuid_menu_links_transform_source($context['source']);
+}
+
+/**
+ * Implements hook_pathauto_existing_alias_source_alter().
+ */
+function uuid_menu_links_pathauto_existing_alias_source_alter(&$source) {
+  uuid_menu_links_transform_source($source);
 }
 
 /**
@@ -75,63 +129,16 @@ function uuid_menu_links_universal_taxonomy_term_load($identifier = NULL) {
 }
 
 /**
- * Implements hook_menu_link_insert().
- */
-function uuid_menu_links_menu_link_insert($link) {
-  _uuid_menu_links_menu_link_save($link);
-}
-
-/**
- * Implements hook_menu_link_update().
- */
-function uuid_menu_links_menu_link_update($link) {
-  _uuid_menu_links_menu_link_save($link);
-}
-
-/**
- * Implements hook_path_insert().
- */
-function uuid_menu_links_path_insert($path) {
-  _uuid_menu_links_path_save($path);
-}
-
-/**
- * Implements hook_path_update().
- */
-function uuid_menu_links_path_update($path) {
-  _uuid_menu_links_path_save($path);
-}
-
-/**
  * Updates a menu link to contain the UUID instead of a non-portable identifier.
  *
  * @param array
  *   The menu link to update.
  */
 function _uuid_menu_links_menu_link_save($link) {
-  $link_path = explode('/', $link['link_path']);
-  switch ($link_path[0]) {
-    case 'node':
-      if (isset($link_path[1]) && is_numeric($link_path[1])) {
-        $node = node_load($link_path[1]);
-        if (!empty($node->uuid)) {
-          $link_path[1] = $node->uuid;
-          $link['link_path'] = implode('/', $link_path);
-          menu_link_save($link);
-        }
-      }
-      break;
-
-    case 'taxonomy':
-      if (isset($link_path[1]) && 'term' == $link_path[1] && isset($link_path[2]) && is_numeric($link_path[2])) {
-        $taxonomy_term = taxonomy_term_load($link_path[2]);
-        if (!empty($taxonomy_term->uuid)) {
-          $link_path[2] = $taxonomy_term->uuid;
-          $link['link_path'] = implode('/', $link_path);
-          menu_link_save($link);
-        }
-      }
-      break;
+  $original_link_path = $link['link_path'];
+  uuid_menu_links_transform_source($link['link_path']);
+  if ($original_link_path != $link['link_path']) {
+    menu_link_save($link);
   }
 }
 
@@ -142,34 +149,11 @@ function _uuid_menu_links_menu_link_save($link) {
  *   The path to resave.
  */
 function _uuid_menu_links_path_save($path) {
-  $source = explode('/', $path['source']);
-  if (empty($source)) {
-    return;
+  $original_source = $path['source'];
+  uuid_menu_links_transform_source($path['source']);
+  if ($original_source != $path['source']) {
+    path_save($path);
   }
-
-  switch ($source[0]) {
-    case 'node':
-      if (isset($source[1]) && is_numeric($source[1])) {
-        $node = node_load($source[1]);
-        if (!empty($node->uuid)) {
-          $source[1] = $node->uuid;
-          $path['source'] = implode('/', $source);
-          path_save($path);
-        }
-      }
-      break;
-
-    case 'taxonomy':
-      if (isset($source[1]) && 'term' == $source[1] && isset($source[2]) && is_numeric($source[2])) {
-        $taxonomy_term = taxonomy_term_load($source[2]);
-        if (!empty($taxonomy_term->uuid)) {
-          $source[2] = $taxonomy_term->uuid;
-          $path['source'] = implode('/', $source);
-          path_save($path);
-        }
-      }
-      break;
-  } // end switch ($source[0]).
 }
 
 /**
@@ -183,5 +167,40 @@ function _uuid_menu_links_menu_load_token_map() {
     'node/%node' => 'node/%uuid_menu_links_universal_node',
     'taxonomy/term/%taxonomy_term' => 'taxonomy/term/%uuid_menu_links_universal_taxonomy_term',
   );
+}
+
+/**
+ * Transforms a source url to that containing a UUID.
+ *
+ * @param string $source
+ *   The source url passed by reference to transform.
+ */
+function uuid_menu_links_transform_source(&$source) {
+  $pieces = explode('/', $source);
+  if (empty($pieces)) {
+    return;
+  }
+
+  switch ($pieces[0]) {
+    case 'node':
+      if (isset($pieces[1]) && is_numeric($pieces[1])) {
+        $node = node_load($pieces[1]);
+        if (!empty($node->uuid)) {
+          $pieces[1] = $node->uuid;
+          $source = implode('/', $pieces);
+        }
+      }
+      break;
+
+    case 'taxonomy':
+      if (isset($pieces[1]) && 'term' == $pieces[1] && isset($pieces[2]) && is_numeric($pieces[2])) {
+        $taxonomy_term = taxonomy_term_load($pieces[2]);
+        if (!empty($taxonomy_term->uuid)) {
+          $pieces[2] = $taxonomy_term->uuid;
+          $source = implode('/', $pieces);
+        }
+      }
+      break;
+  }
 }
 

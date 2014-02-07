@@ -1,0 +1,12 @@
+diff --git a/pathauto.inc b/pathauto.inc
+index 9f98eec..4a3c20f 100644
+--- a/pathauto.inc
++++ b/pathauto.inc
+@@ -89,6 +89,7 @@ function _pathauto_alias_exists($alias, $source, $language = LANGUAGE_NONE) {
+  *   - alias: The URL alias.
+  */
+ function _pathauto_existing_alias_data($source, $language = LANGUAGE_NONE) {
++  drupal_alter('pathauto_existing_alias_source', $source);
+   $pid = db_query_range("SELECT pid FROM {url_alias} WHERE source = :source AND language IN (:language, :language_none) ORDER BY language DESC, pid DESC", 0, 1, array(':source' => $source, ':language' => $language, ':language_none' => LANGUAGE_NONE))->fetchField();
+   return path_load(array('pid' => $pid));
+ }
