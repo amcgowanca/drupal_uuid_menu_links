@@ -254,7 +254,5 @@ function uuid_menu_links_pages_views_default_views() {
   $handler->display->display_options['menu']['context_only_inline'] = 0;
   $export['taxonomy_uuid'] = $view;
 
-  features_alter_code('views_view', $export);
-
   return $export;
 }
