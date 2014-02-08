@@ -129,6 +129,47 @@ function uuid_menu_links_universal_taxonomy_term_load($identifier = NULL) {
 }
 
 /**
+ * Synchronizes all menu links and path aliases with UUIDs.
+ */
+function uuid_menu_links_sync() {
+  $query = db_select('menu_links', 'ml')
+    ->fields('ml')
+    ->condition(db_or()
+      ->condition('ml.link_path', db_like('node/') . '%', 'LIKE')
+      ->condition('ml.link_path', db_like('taxonomy/term/') . '%', 'LIKE')
+    )
+    ->execute();
+  while ($link = $query->fetch()) {
+    $original = $link->link_path;
+    uuid_menu_links_transform_source($link->link_path);
+    if ($original != $link->link_path) {
+      db_update('menu_links')
+        ->fields(array('link_path' => $link->link_path))
+        ->condition('mlid', $link->mlid)
+        ->execute();
+    }
+  }
+
+  $query = db_select('url_alias', 'p')
+    ->fields('p')
+    ->condition(db_or()
+      ->condition('p.source', db_like('node/') . '%', 'LIKE')
+      ->condition('p.source', db_like('taxonomy/term/') . '%', 'LIKE')
+    )
+    ->execute();
+  while ($path = $query->fetch()) {
+    $original = $path->source;
+    uuid_menu_links_transform_source($path->source);
+    if ($original != $path->source) {
+      db_update('url_alias')
+        ->fields(array('source' => $path->source))
+        ->condition('pid', $path->pid)
+        ->execute();
+    }
+  }
+}
+
+/**
  * Updates a menu link to contain the UUID instead of a non-portable identifier.
  *
  * @param array
@@ -203,4 +244,3 @@ function uuid_menu_links_transform_source(&$source) {
       break;
   }
 }
-
