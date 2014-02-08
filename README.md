@@ -87,6 +87,10 @@ It is not untypical for many developers to leverage the power of Drupal 7's cont
 
 Available within the patches directory is a the [pathauto-existing_alias_source_alter-hook.patch](https://github.com/amcgowanca/drupal_uuid_menu_links/blob/7.x-1.x/patches/pathauto-existing_alias_source_alter-hook.patch) that introduces a new alter hook named `pathauto_existing_alias_source` implemented as `hook_pathauto_existing_alias_source_alter()`. This hook is implemented within the UUID Menu Links module so that source paths with non-portable identifiers are transfered into those with UUID (e.g. `node/[nid]` => `node/[uuid]`).
 
+### Synchronize non-portables
+
+Non-portable menu links and path alias sources can be synchronized (updated with UUIDs) by invoking the drush command `drush uuid-menu-links-sync` or by invoking the function `uuid_menu_links_sync()`.
+
 ### License
 
 The UUID Menu Links is licensed under the [GNU General Public License](http://www.gnu.org/licenses/gpl-2.0.html) version 2.
