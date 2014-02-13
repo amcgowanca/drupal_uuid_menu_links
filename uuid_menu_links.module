@@ -20,12 +20,134 @@ function uuid_menu_links_module_implements_alter(&$implementations, $hook) {
  */
 function uuid_menu_links_menu_alter(&$menu) {
   $original_menu = $menu;
+  $uuid_menu_links_info = uuid_menu_links_info();
   foreach ($original_menu as $routing_path => $menu_item) {
-    foreach (_uuid_menu_links_menu_load_token_map() as $original => $new) {
-      if (0 === strpos($routing_path, $original)) {
-        $new_routing_path = str_replace($original, $new, $routing_path);
-        $menu[$new_routing_path] = $menu_item;
-        unset($menu[$routing_path]);
+    foreach ($uuid_menu_links_info as $info) {
+      if (FALSE === strpos($routing_path, '%' . $info['menu_token']['original'])) {
+        continue;
+      }
+      $new_routing_path = str_replace('%' . $info['menu_token']['original'], '%' . $info['menu_token']['replacement'], $routing_path);
+      $menu[$new_routing_path] = $menu_item;
+      unset($menu[$new_routing_path]);
+    }
+  }
+}
+
+/**
+ * Retrieves the UUID Menu Links transform information.
+ *
+ * @return array
+ *   Returns the transform information.
+ */
+function uuid_menu_links_info() {
+  $uuid_menu_links_info = &drupal_static(__FUNCTION__, array());
+  if (empty($uuid_menu_links_info)) {
+    foreach (module_implements('uuid_menu_links_info') as $module) {
+      $link_info = module_invoke($module, 'uuid_menu_links_info');
+      foreach ($link_info as $entity_type => $info) {
+        // '5' is the number of characters that are appended to the
+        // token to represent the load hook callback, or `_load`.
+        $menu_token = substr($info['original_load_hook'], 0, strlen($info['original_load_hook']) - 5);
+        $menu_token_replacement = substr($info['load_hook'], 0, strlen($info['load_hook']) - 5);
+        $info['menu_token'] = array('original' => $menu_token, 'replacement' => $menu_token_replacement);
+        $info['menu_path']['prefix'] = rtrim($info['menu_path']['prefix'], '/');
+        if (isset($info['menu_path']['ignored']) && !is_array($info['menu_path']['ignored'])) {
+          $info['menu_path']['ignored'] = array($info['menu_path']['ignored']);
+        }
+        else if (!isset($info['menu_path']['ignored'])) {
+          $info['menu_path']['ignored'] = array();
+        }
+        // TODO: Add proper validation for building information.
+        $uuid_menu_links_info[$entity_type] = $info;
+      }
+    }
+    // Allow other modules to alter the transform information prior to returning.
+    drupal_alter('uuid_menu_links_info', $uuid_menu_links_info);
+  }
+  return $uuid_menu_links_info;
+}
+
+/**
+ * Implements hook_uuid_menu_links_info().
+ */
+function uuid_menu_links_uuid_menu_links_info() {
+  return array(
+    'node' => array(
+      'original_load_hook' => 'node_load',
+      'load_hook' => 'uuid_menu_links_universal_node_load',
+      'menu_path' => array('prefix' => 'node'),
+    ),
+    'taxonomy_term' => array(
+      'original_load_hook' => 'taxonomy_term_load',
+      'load_hook' => 'uuid_menu_links_universal_taxonomy_term_load',
+      'menu_path' => array('prefix' => 'taxonomy/term'),
+    ),
+    'file' => array(
+      'original_load_hook' => 'file_load',
+      'load_hook' => 'uuid_menu_links_universal_file_load',
+      'menu_path' => array('prefix' => 'file'),
+    ),
+    'user' => array(
+      'original_load_hook' => 'user_load',
+      'load_hook' => 'uuid_menu_links_universal_user_load',
+      'menu_path' => array(
+        'prefix' => 'user',
+        'ignored' => array('user/register', 'user/login', 'user/logout', 'user/password'),
+      ),
+    ),
+  );
+}
+
+/**
+ * Synchronizes all menu links and path aliases with UUIDs.
+ */
+function uuid_menu_links_sync() {
+  // Synchronize through direct SQL select and updates, the
+  // newly transformed menu link and path aliases to contain the UUIDs.
+  _uuid_menu_links_sync_menu_links();
+  _uuid_menu_links_sync_path_aliases();
+  // Allow other modules to perform operations on synchronization
+  // prior to clearing menu and path caches in the event that they
+  // alter the menu or paths themselves.
+  module_invoke_all('uuid_menu_links_sync');
+  // Clear both `cache_menu` and `cache_path` bins.
+  cache_clear_all('*', 'cache_menu', TRUE);
+  cache_clear_all('*', 'cache_path', TRUE);
+}
+
+/**
+ * Transforms a source url to that containing a UUID.
+ *
+ * @param string $source
+ *   The source url passed by reference to transform.
+ */
+function uuid_menu_links_transform_source(&$source) {
+  // TODO: Improve the work that happens here.
+  $original_source = $source;
+  $uuid_menu_links_info = uuid_menu_links_info();
+  foreach ($uuid_menu_links_info as $type => $info) {
+    // Ensure that the $original_source contains the menu_path's prefix
+    // as well as the original source is not within one of the ignored paths. For example,
+    // a user/[uid] would have a prefix of user/, however the source may actually be
+    // user/register in which should not be transformed to contain a UUID.
+    if (0 === strpos($original_source, $info['menu_path']['prefix'] . '/') && !in_array($original_source, $info['menu_path']['ignored'])) {
+      $prefix = $info['menu_path']['prefix'];
+      $original_source = str_replace($info['menu_path']['prefix'] . '/', '', $original_source);
+      $source_pieces = explode('/', $original_source);
+      $identifier = array_shift($source_pieces);
+      $suffix = implode('/', $source_pieces);
+      // Should the identifier listed be simply the replacement token,
+      // immediately return as invoking any sort of load hook will present an error.
+      if ('%' === $identifier) {
+        return;
+      }
+      // Invoke the newly available load hook and transform the source to
+      // contain the UUID should the UUID exist on the loaded item.
+      $load_hook = $info['load_hook'];
+      $item = $load_hook($identifier);
+      if (!empty($item->uuid)) {
+        $source = $prefix . '/' . $item->uuid . '/' . $suffix;
+        return;
       }
     }
   }
@@ -63,18 +185,9 @@ function uuid_menu_links_path_update($path) {
  * Implements hook_menu_get_object_load_type_alter().
  */
 function uuid_menu_links_menu_get_object_load_type_alter(&$type, $original_type) {
-  switch ($original_type) {
-    case 'node':
-      if ('node' == arg(0)) {
-        $type = 'uuid_menu_links_universal_node';
-      }
-      break;
-
-    case 'taxonomy_term':
-      if ('taxonomy' == arg(0) && 'term' == arg(1)) {
-        $type = 'uuid_menu_links_universal_taxonomy_term';
-      }
-      break;
+  $uuid_menu_links_info = uuid_menu_links_info();
+  if (isset($uuid_menu_links_info[$original_type]) && $original_type == $uuid_menu_links_info[$original_type]['menu_token']['original']) {
+    $type = $uuid_menu_links_info[$original_type]['menu_token']['replacement'];
   }
 }
 
@@ -120,7 +233,7 @@ function uuid_menu_links_universal_node_load($identifier = NULL) {
  *   Returns the single loaded term by the $identifier if exists, otherwise false.
  */
 function uuid_menu_links_universal_taxonomy_term_load($identifier = NULL) {
-  $taxonomy_term = entity_uuid_load('node', array($identifier));
+  $taxonomy_term = entity_uuid_load('taxonomy_term', array($identifier));
   $taxonomy_term = !empty($taxonomy_term) && is_array($taxonomy_term) ? reset($taxonomy_term) : NULL;
   if (empty($taxonomy_term)) {
     $taxonomy_term = taxonomy_term_load($identifier);
@@ -129,44 +242,39 @@ function uuid_menu_links_universal_taxonomy_term_load($identifier = NULL) {
 }
 
 /**
- * Synchronizes all menu links and path aliases with UUIDs.
+ * Load hook for %uuid_menu_links_universal_file menu token.
+ *
+ * @param string $identifier
+ *   The identifier of the file to load, either UUID or FID.
+ *
+ * @return object
+ *   Returns the single loaded file by the $identifier if exists, otherwise false.
  */
-function uuid_menu_links_sync() {
-  $query = db_select('menu_links', 'ml')
-    ->fields('ml')
-    ->condition(db_or()
-      ->condition('ml.link_path', db_like('node/') . '%', 'LIKE')
-      ->condition('ml.link_path', db_like('taxonomy/term/') . '%', 'LIKE')
-    )
-    ->execute();
-  while ($link = $query->fetch()) {
-    $original = $link->link_path;
-    uuid_menu_links_transform_source($link->link_path);
-    if ($original != $link->link_path) {
-      db_update('menu_links')
-        ->fields(array('link_path' => $link->link_path))
-        ->condition('mlid', $link->mlid)
-        ->execute();
-    }
+function uuid_menu_links_universal_file_load($identifier = NULL) {
+  $file = entity_uuid_load('file', array($identifier));
+  $file = !empty($file) && is_array($file) ? reset($file) : NULL;
+  if (empty($file)) {
+    $file = file_load($identifier);
   }
+  return $file;
+}
 
-  $query = db_select('url_alias', 'p')
-    ->fields('p')
-    ->condition(db_or()
-      ->condition('p.source', db_like('node/') . '%', 'LIKE')
-      ->condition('p.source', db_like('taxonomy/term/') . '%', 'LIKE')
-    )
-    ->execute();
-  while ($path = $query->fetch()) {
-    $original = $path->source;
-    uuid_menu_links_transform_source($path->source);
-    if ($original != $path->source) {
-      db_update('url_alias')
-        ->fields(array('source' => $path->source))
-        ->condition('pid', $path->pid)
-        ->execute();
-    }
+/**
+ * Load hook for %uuid_menu_links_universal_user_load menu token.
+ *
+ * @param string $identifier
+ *   The identifier of the user to load, either UUID or UID.
+ *
+ * @return object
+ *   Returns the single loaded user by the $identifier if exists, otherwise false.
+ */
+function uuid_menu_links_universal_user_load($identifier = NULL) {
+  $user = entity_uuid_load('user', array($identifier));
+  $user = !empty($user) && is_array($user) ? reset($user) : NULL;
+  if (empty($user)) {
+    $user = user_load($identifier);
   }
+  return $user;
 }
 
 /**
@@ -198,49 +306,58 @@ function _uuid_menu_links_path_save($path) {
 }
 
 /**
- * Returns a map of menu routing elements to be re-written.
- *
- * @return array
- *   Returns the map of routing pieces, original => new.
+ * Handles the menu link synchronization with UUID representations.
  */
-function _uuid_menu_links_menu_load_token_map() {
-  return array(
-    'node/%node' => 'node/%uuid_menu_links_universal_node',
-    'taxonomy/term/%taxonomy_term' => 'taxonomy/term/%uuid_menu_links_universal_taxonomy_term',
-  );
+function _uuid_menu_links_sync_menu_links() {
+  $query = db_select('menu_links', 'ml')
+    ->fields('ml')
+    ->condition(_uuid_menu_links_select_build_or('ml.link_path'))
+    ->execute();
+  while ($link = $query->fetch()) {
+    $original = $link->link_path;
+    uuid_menu_links_transform_source($link->link_path);
+    if ($original != $link->link_path) {
+      db_update('menu_links')
+        ->fields(array('link_path' => $link->link_path))
+        ->condition('mlid', $link->mlid)
+        ->execute();
+    }
+  }
 }
 
 /**
- * Transforms a source url to that containing a UUID.
- *
- * @param string $source
- *   The source url passed by reference to transform.
+ * Handles the path alias synchronization with UUID representations.
  */
-function uuid_menu_links_transform_source(&$source) {
-  $pieces = explode('/', $source);
-  if (empty($pieces)) {
-    return;
+function _uuid_menu_links_sync_path_aliases() {
+  $query = db_select('url_alias', 'p')
+    ->fields('p')
+    ->condition(_uuid_menu_links_select_build_or('p.source'))
+    ->execute();
+  while ($path = $query->fetch()) {
+    $original = $path->source;
+    uuid_menu_links_transform_source($path->source);
+    if ($original != $path->source) {
+      db_update('url_alias')
+        ->fields(array('source' => $path->source))
+        ->condition('pid', $path->pid)
+        ->execute();
+    }
   }
+}
 
-  switch ($pieces[0]) {
-    case 'node':
-      if (isset($pieces[1]) && is_numeric($pieces[1])) {
-        $node = node_load($pieces[1]);
-        if (!empty($node->uuid)) {
-          $pieces[1] = $node->uuid;
-          $source = implode('/', $pieces);
-        }
-      }
-      break;
-
-    case 'taxonomy':
-      if (isset($pieces[1]) && 'term' == $pieces[1] && isset($pieces[2]) && is_numeric($pieces[2])) {
-        $taxonomy_term = taxonomy_term_load($pieces[2]);
-        if (!empty($taxonomy_term->uuid)) {
-          $pieces[2] = $taxonomy_term->uuid;
-          $source = implode('/', $pieces);
-        }
-      }
-      break;
+/**
+ * Builds a `db_or()` condition containing path aliases prefixes.
+ *
+ * @param string $field
+ *   The field in which the LIKE comparison should be performed on.
+ *
+ * @return DatabaseCondition
+ *   The combined `db_or()` condition.
+ */
+function _uuid_menu_links_select_build_or($field) {
+  $or = db_or();
+  foreach (uuid_menu_links_info() as $info) {
+    $or->condition($field, db_like($info['menu_path']['prefix'] . '/') . '%', 'LIKE');
   }
+  return $or;
 }
