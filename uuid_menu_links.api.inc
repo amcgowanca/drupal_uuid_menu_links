@@ -44,4 +44,3 @@ function hook_uuid_menu_links_info_alter(array &$info) {
   // Removes the `node` type from being available as a UUID Menu Link compatible.
   unset($info['node']);
 }
-
