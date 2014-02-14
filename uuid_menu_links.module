@@ -28,7 +28,7 @@ function uuid_menu_links_menu_alter(&$menu) {
       }
       $new_routing_path = str_replace('%' . $info['menu_token']['original'], '%' . $info['menu_token']['replacement'], $routing_path);
       $menu[$new_routing_path] = $menu_item;
-      unset($menu[$new_routing_path]);
+      unset($menu[$routing_path]);
     }
   }
 }
