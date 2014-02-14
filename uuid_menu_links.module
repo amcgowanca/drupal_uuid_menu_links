@@ -146,7 +146,7 @@ function uuid_menu_links_transform_source(&$source) {
       $load_hook = $info['load_hook'];
       $item = $load_hook($identifier);
       if (!empty($item->uuid)) {
-        $source = $prefix . '/' . $item->uuid . '/' . $suffix;
+        $source = $prefix . '/' . $item->uuid . (!empty($suffix) ? ('/' . $suffix) : '');
         return;
       }
     }
@@ -360,4 +360,69 @@ function _uuid_menu_links_select_build_or($field) {
     $or->condition($field, db_like($info['menu_path']['prefix'] . '/') . '%', 'LIKE');
   }
   return $or;
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter() for node_form().
+ *
+ * Re-implementation of the path module's node_form() alter. This is
+ * cecause we attempt to limit the number of patches applied to projects,
+ * and the path module loads sources using node ids, let's attempt
+ * to reload using the node's UUID.
+ */
+function uuid_menu_links_form_node_form_alter(&$form, $form_state) {
+  if (empty($form['path']['pid']['#value'])) {
+    $path = array();
+    if (!empty($form['#node']->uuid)) {
+      $conditions = array('source' => 'node/' . $form['#node']->uuid);
+      $langcode = entity_language('node', $form['#node']);
+      if (LANGUAGE_NONE != $langcode) {
+        $conditions['language'] = $langcode;
+      }
+      $path = path_load($conditions);
+      if (FALSE === $path) {
+        $path = array();
+      }
+    }
+    $path += array(
+      'pid' => NULL,
+      'source' => isset($form['#node']->uuid) ? 'node/' . $form['#node']->uuid : NULL,
+      'alias' => '',
+      'language' => isset($langcode) ? $langcode : LANGUAGE_NONE,
+    );
+    $form['path']['alias']['#default_value'] = $path['alias'];
+    $form['path']['pid']['#value'] = $path['pid'];
+    $form['path']['source']['#value'] = $path['source'];
+    $form['path']['language']['#value'] = $path['language'];
+  }
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter() for taxonomy_form_term().
+ *
+ * Re-implementation of the path module's taxonomy_form() alter. This is
+ * because we attempt to limit the number of patches applied to projects,
+ * and the path module loads sources using the taxonomy term's id, let's attempt
+ * to reload using the taxonomy term's UUID.
+ */
+function uuid_menu_links_form_taxonomy_form_term_alter(&$form, $form_state) {
+  if (empty($form_state['confirm_delete']) && empty($form['path']['pid']['#value'])) {
+    $langcode = entity_language('taxonomy_term', (object) $form['#term']);
+    $langcode = !empty($langcode) ? $langcode : LANGUAGE_NONE;
+    $conditions = array('source' => 'taxonomy/term/' . $form['#term']['uuid'], 'language' => $langcode);
+    $path = isset($form['#term']['uuid']) ? path_load($conditions) : array();
+    if (FALSE === $path) {
+      $path = array();
+    }
+    $path += array(
+      'pid' => NULL,
+      'source' => isset($form['#term']['uuid']) ? 'taxonomy/term/' . $form['#term']['uuid'] : NULL,
+      'alias' => '',
+      'language' => $langcode,
+    );
+    $form['path']['alias']['#default_value'] = $path['alias'];
+    $form['path']['pid']['#value'] = $path['pid'];
+    $form['path']['source']['#value'] = $path['source'];
+    $form['path']['language']['#value'] = $path['language'];
+  }
 }
