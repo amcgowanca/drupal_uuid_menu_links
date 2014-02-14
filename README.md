@@ -18,20 +18,20 @@ This project can be downloaded and used within a Drush make file like any other 
 projects[uuid_menu_links][type] = "module"
 projects[uuid_menu_links][download][type] = "git"
 projects[uuid_menu_links][download][url] = "git@github.com:amcgowanca/uuid_menu_links.git"
-projects[uuid_menu_links][download][tag] = "7.x-0.2"
+projects[uuid_menu_links][download][tag] = "7.x-0.5"
 ```
 
 Furthermore, if you are using this module with Drush Make files, it is recommended that the Drupal core is also patched using a one line download to the available patch file. This is done by adding the line below immediately after where the Drupal core project is defined:
 
 ```
-projects[drupal][patch][] = "https://raw2.github.com/amcgowanca/drupal_uuid_menu_links/7.x-0.2/patches/menu_get_object-load-type-alter.patch"
+projects[drupal][patch][] = "https://raw2.github.com/amcgowanca/drupal_uuid_menu_links/7.x-0.5/patches/menu_get_object-load-type-alter.patch"
 ```
 
 **Notes:**
 
 * This module is downloaded using Git.
-* This module will be downloaded the tagged release version 7.x-0.2.
-* The patch file provided will be downloaded from the 7.x-0.2 tag release.
+* This module will be downloaded the tagged release version 7.x-0.5.
+* The patch file provided will be downloaded from the 7.x-0.5 tag release.
 
 
 ### The Problem
