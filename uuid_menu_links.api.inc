@@ -21,14 +21,17 @@ function hook_uuid_menu_links_info() {
     'node' => array(
       'original_load_hook' => 'node_load',
       'load_hook' => 'uuid_menu_links_universal_node_load',
-      'menu_path' => array('prefix' => 'node'),
+      'menu_path' => array(
+        'prefix' => 'node',
+        'ignored_tokens' => array('%node_type'),
+      ),
     ),
     'user' => array(
       'original_load_hook' => 'user_load',
       'load_hook' => 'uuid_menu_links_universal_user_load',
       'menu_path' => array(
         'prefix' => 'user',
-        'ignored' => array('user/register', 'user/login', 'user/logout', 'user/password'),
+        'ignored_paths' => array('user/register', 'user/login', 'user/logout', 'user/password'),
       ),
     ),
   );

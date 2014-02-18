@@ -30,7 +30,7 @@ function uuid_menu_links_menu_alter(&$menu) {
       }
 
       foreach ($info['menu_path']['ignored_tokens'] as $ignorable) {
-        if (in_array('%' . $ignorable, $routing_path_pieces)) {
+        if (in_array($ignorable, $routing_path_pieces)) {
           $rewritable = FALSE;
           break;
         }
