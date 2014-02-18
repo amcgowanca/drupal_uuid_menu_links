@@ -23,10 +23,24 @@ function uuid_menu_links_menu_alter(&$menu) {
   $uuid_menu_links_info = uuid_menu_links_info();
   foreach ($original_menu as $routing_path => $menu_item) {
     foreach ($uuid_menu_links_info as $info) {
-      if (FALSE === strpos($routing_path, '%' . $info['menu_token']['original'])) {
+      $rewritable = TRUE;
+      $routing_path_pieces = explode('/', $routing_path);
+      if (!in_array('%' . $info['menu_token']['original'], $routing_path_pieces)) {
         continue;
       }
-      $new_routing_path = str_replace('%' . $info['menu_token']['original'], '%' . $info['menu_token']['replacement'], $routing_path);
+
+      foreach ($info['menu_path']['ignored_tokens'] as $ignorable) {
+        if (in_array('%' . $ignorable, $routing_path_pieces)) {
+          $rewritable = FALSE;
+          break;
+        }
+      }
+
+      if (!$rewritable) {
+        continue;
+      }
+
+      $new_routing_path = str_replace('%' . $info['menu_token']['original'] . '/', '%' . $info['menu_token']['replacement'] . '/', $routing_path);
       $menu[$new_routing_path] = $menu_item;
       unset($menu[$routing_path]);
     }
@@ -51,11 +65,18 @@ function uuid_menu_links_info() {
         $menu_token_replacement = substr($info['load_hook'], 0, strlen($info['load_hook']) - 5);
         $info['menu_token'] = array('original' => $menu_token, 'replacement' => $menu_token_replacement);
         $info['menu_path']['prefix'] = rtrim($info['menu_path']['prefix'], '/');
-        if (isset($info['menu_path']['ignored']) && !is_array($info['menu_path']['ignored'])) {
-          $info['menu_path']['ignored'] = array($info['menu_path']['ignored']);
+        if (isset($info['menu_path']['ignored_paths']) && !is_array($info['menu_path']['ignored_paths'])) {
+          $info['menu_path']['ignored_paths'] = array($info['menu_path']['ignored_paths']);
         }
-        else if (!isset($info['menu_path']['ignored'])) {
-          $info['menu_path']['ignored'] = array();
+        else if (!isset($info['menu_path']['ignored_paths'])) {
+          $info['menu_path']['ignored_paths'] = array();
+        }
+
+        if (isset($info['menu_path']['ignored_tokens']) && !is_array($info['menu_path']['ignored_tokens'])) {
+          $info['menu_path']['ignored_tokens'] = array($info['menu_path']['ignored_tokens']);
+        }
+        else if (!isset($info['menu_path']['ignored_tokens'])) {
+          $info['menu_path']['ignored_tokens'] = array();
         }
         // TODO: Add proper validation for building information.
         $uuid_menu_links_info[$entity_type] = $info;
@@ -75,7 +96,10 @@ function uuid_menu_links_uuid_menu_links_info() {
     'node' => array(
       'original_load_hook' => 'node_load',
       'load_hook' => 'uuid_menu_links_universal_node_load',
-      'menu_path' => array('prefix' => 'node'),
+      'menu_path' => array(
+        'prefix' => 'node',
+        'ignored_tokens' => array('%node_type'),
+      ),
     ),
     'taxonomy_term' => array(
       'original_load_hook' => 'taxonomy_term_load',
@@ -92,7 +116,7 @@ function uuid_menu_links_uuid_menu_links_info() {
       'load_hook' => 'uuid_menu_links_universal_user_load',
       'menu_path' => array(
         'prefix' => 'user',
-        'ignored' => array('user/register', 'user/login', 'user/logout', 'user/password'),
+        'ignored_path' => array('user/register', 'user/login', 'user/logout', 'user/password'),
       ),
     ),
   );
@@ -130,7 +154,7 @@ function uuid_menu_links_transform_source(&$source) {
     // as well as the original source is not within one of the ignored paths. For example,
     // a user/[uid] would have a prefix of user/, however the source may actually be
     // user/register in which should not be transformed to contain a UUID.
-    if (0 === strpos($original_source, $info['menu_path']['prefix'] . '/') && !in_array($original_source, $info['menu_path']['ignored'])) {
+    if (0 === strpos($original_source, $info['menu_path']['prefix'] . '/') && !in_array($original_source, $info['menu_path']['ignored_paths'])) {
       $prefix = $info['menu_path']['prefix'];
       $original_source = str_replace($info['menu_path']['prefix'] . '/', '', $original_source);
       $source_pieces = explode('/', $original_source);
