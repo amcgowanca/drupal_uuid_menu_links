@@ -18,20 +18,20 @@ This project can be downloaded and used within a Drush make file like any other 
 projects[uuid_menu_links][type] = "module"
 projects[uuid_menu_links][download][type] = "git"
 projects[uuid_menu_links][download][url] = "git@github.com:amcgowanca/uuid_menu_links.git"
-projects[uuid_menu_links][download][tag] = "7.x-0.2"
+projects[uuid_menu_links][download][tag] = "7.x-0.5"
 ```
 
 Furthermore, if you are using this module with Drush Make files, it is recommended that the Drupal core is also patched using a one line download to the available patch file. This is done by adding the line below immediately after where the Drupal core project is defined:
 
 ```
-projects[drupal][patch][] = "https://raw2.github.com/amcgowanca/drupal_uuid_menu_links/7.x-0.2/patches/menu_get_object-load-type-alter.patch"
+projects[drupal][patch][] = "https://raw2.github.com/amcgowanca/drupal_uuid_menu_links/7.x-0.5/patches/menu_get_object-load-type-alter.patch"
 ```
 
 **Notes:**
 
 * This module is downloaded using Git.
-* This module will be downloaded the tagged release version 7.x-0.2.
-* The patch file provided will be downloaded from the 7.x-0.2 tag release.
+* This module will be downloaded the tagged release version 7.x-0.5.
+* The patch file provided will be downloaded from the 7.x-0.5 tag release.
 
 
 ### The Problem
@@ -85,7 +85,13 @@ function hook_menu_get_object_load_type_alter(&$type, $original_type) {
 
 It is not untypical for many developers to leverage the power of Drupal 7's contributed module [Pathauto](http://drupal.org/project/pathauto) as part of a site build. Using the UUID Menu Links module in conjunction with Pathauto you will soon see that there is a problem. This is due to UUID Menu Links re-writing the source path of URL aliases and as a result, when Pathauto attempts to locate existing paths using the standard non-portable source path, Pathauto will actually create a duplicate entry. While Pathauto provides the `hook_pathauto_alias_alter()` hook which allows for the source to be altered via `$context['source']` (the second parameter of the alter hook, passed by reference) it is invoked after the `_pathauto_existing_alias_data()` function that uses the `$source` of an alias to find an existing path. Due to this, a simple patch is required to allow for the `$source` parameter of `_pathauto_existing_alias_data()` to be altered prior to the database query execution.
 
-Available within the patches directory is a the [pathauto-existing_alias_source_alter-hook.patch](https://github.com/amcgowanca/drupal_uuid_menu_links/blob/7.x-1.x/patches/pathauto-existing_alias_source_alter-hook.patch) that introduces a new alter hook named `pathauto_existing_alias_source` implemented as `hook_pathauto_existing_alias_source_alter()`. This hook is implemented within the UUID Menu Links module so that source paths with non-portable identifiers are transfered into those with UUID (e.g. `node/[nid]` => `node/[uuid]`).
+Available within the patches directory is the [pathauto-existing_alias_source_alter-hook.patch](https://github.com/amcgowanca/drupal_uuid_menu_links/blob/7.x-1.x/patches/pathauto-existing_alias_source_alter-hook.patch) that introduces a new alter hook named `pathauto_existing_alias_source` implemented as `hook_pathauto_existing_alias_source_alter()`. This hook is implemented within the UUID Menu Links module so that source paths with non-portable identifiers are transfered into those with UUID (e.g. `node/[nid]` => `node/[uuid]`).
+
+### UUID Menu Links and Entity
+
+The Drupal 7's contributed module [Entity API](http://drupal.org/project/entity) is typically used in all Drupal 7 site builds. However, the Entity module is not aware of the UUID module when they are installed side-by-side on the same project. When using the Entity Wrappers for loading an entity based on the UUID, the Entity Wrapper throws an Exception during the validation of the value using to retrieve the entity. As a result, a patch is required for the function `entity_property_verify_data_type()`.
+
+Available within the patches directory is the [entity-support_for_uuid_as_types.patch](https://github.com/amcgowanca/drupal_uuid_menu_links/blob/7.x-1.x/patches/entity-support_for_uuid_as_types.patch) that allows for the validation of the UUID if the entity contains the UUID property key.
 
 ### Synchronize non-portables
 
