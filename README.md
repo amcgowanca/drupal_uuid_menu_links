@@ -93,6 +93,10 @@ The Drupal 7's contributed module [Entity API](http://drupal.org/project/entity)
 
 Available within the patches directory is the [entity-support_for_uuid_as_types.patch](https://github.com/amcgowanca/drupal_uuid_menu_links/blob/7.x-1.x/patches/entity-support_for_uuid_as_types.patch) that allows for the validation of the UUID if the entity contains the UUID property key.
 
+### UUID Menu Links, UUID Features and Pathauto
+
+To effectively leverage UUID Menu Links in combination with UUID Features and Pathauto where Pathauto's Update Action settings is set to something other then "Do nothing. Leave the old alias intact." (`PATHAUTO_UPDATE_ACTION_NO_NEW`), you must apply the a single patch to the Drupal 7's contributed module Feature. This patch located [here](https://drupal.org/files/issues/features_1844566_2_invoke-hooks-for-all-components.patch) introduced a `before` and `after` hook for feature operations, such as revert or enable.
+
 ### Synchronize non-portables
 
 Non-portable menu links and path alias sources can be synchronized (updated with UUIDs) by invoking the drush command `drush uuid-menu-links-sync` or by invoking the function `uuid_menu_links_sync()`.

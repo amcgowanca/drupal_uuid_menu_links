@@ -450,3 +450,85 @@ function uuid_menu_links_form_taxonomy_form_term_alter(&$form, $form_state) {
     $form['path']['language']['#value'] = $path['language'];
   }
 }
+
+/**
+ * Implements hook_entity_load().
+ */
+function uuid_menu_links_entity_load(array $entities, $type) {
+  $info = uuid_menu_links_uuid_menu_links_info();
+  if (isset($info[$type])) {
+    foreach ($entities as $eid => &$entity) {
+      $path = path_load(array('source' => $info[$type]['menu_path']['prefix'] . '/' . $entity->uuid));
+      if (!$path) {
+        // If the path does not exist with the UUID, attempt to perform a fall-back by loading
+        // the path using the entity's serial identifier. NOTE: This is not portable and should be checked.
+        $path = path_load(array('source' => $info[$type]['menu_path']['prefix'] . '/' . $eid));
+      }
+
+      if ($path) {
+        $entities[$eid]->path = $path;
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_uuid_node_features_export_render_alter().
+ */
+function uuid_menu_links_uuid_node_features_export_render_alter(&$export, $node, $module) {
+  if (!empty($export->path)) {
+    unset($export->path['pid']);
+  }
+}
+
+/**
+ * Implements hook_uuid_node_features_rebuild_alter().
+ */
+function uuid_menu_links_uuid_node_features_rebuild_alter(&$node, $module) {
+  $info = uuid_menu_links_uuid_menu_links_info();
+  if (!empty($node->uuid)) {
+    path_delete(array(
+      'source' => $info['node']['menu_path']['prefix'] . '/' . $node->uuid,
+    ));
+  }
+  if (!empty($node->nid)) {
+    path_delete(array(
+      'source'=> $info['node']['menu_path']['prefix'] . '/' . $node->nid,
+    ));
+  }
+  path_save($node->path);
+  unset($node->path);
+}
+
+/**
+ * Implements hook_features_rebuild_before().
+ */
+function uuid_menu_links_features_rebuild_before($component) {
+  if (module_exists('pathauto')) {
+    _uuid_menu_links_pathauto_update_action_original_value();
+    variable_get('pathauto_update_action', PATHAUTO_UPDATE_ACTION_NO_NEW);
+  }
+}
+
+/**
+ * Implements hook_features_rebuild_after().
+ */
+function uuid_menu_links_features_rebuild_after($component) {
+  if (module_exists('pathauto')) {
+    variable_get('pathauto_update_action', _uuid_menu_links_pathauto_update_action_original_value());
+  }
+}
+
+/**
+ * Stores locally the `pathauto_update_action` variable value.
+ */
+function _uuid_menu_links_pathauto_update_action_original_value() {
+  if (module_exists('pathauto')) {
+    static $value = NULL;
+    if (NULL === $value) {
+      $value = variable_get('pathauto_update_action', PATHAUTO_UPDATE_ACTION_DELETE);
+    }
+    return $value;
+  }
+  return NULL;
+}
