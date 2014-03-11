@@ -513,9 +513,11 @@ function uuid_menu_links_uuid_node_features_rebuild_alter(&$node, $module) {
  * Implements hook_features_rebuild_before().
  */
 function uuid_menu_links_features_rebuild_before($component) {
-  if (module_exists('pathauto') && _uuid_menu_links_features_component_has_valid_type($component)) {
-    _uuid_menu_links_pathauto_update_action_original_value();
-    variable_set('pathauto_update_action', PATHAUTO_UPDATE_ACTION_NO_NEW);
+  if (module_exists('pathauto')) {
+    if (_uuid_menu_links_features_component_has_valid_type($component)) {
+      _uuid_menu_links_pathauto_update_action_original_value();
+      variable_set('pathauto_update_action', PATHAUTO_UPDATE_ACTION_NO_NEW);
+    }
   }
 }
 
@@ -523,8 +525,10 @@ function uuid_menu_links_features_rebuild_before($component) {
  * Implements hook_features_rebuild_after().
  */
 function uuid_menu_links_features_rebuild_after($component) {
-  if (module_exists('pathauto') && _uuid_menu_links_features_component_has_valid_type($component)) {
-    variable_set('pathauto_update_action', _uuid_menu_links_pathauto_update_action_original_value());
+  if (module_exists('pathauto')) {
+    if (_uuid_menu_links_features_component_has_valid_type($component)) {
+      variable_set('pathauto_update_action', _uuid_menu_links_pathauto_update_action_original_value());
+    }
   }
 }
 
@@ -545,17 +549,17 @@ function _uuid_menu_links_pathauto_update_action_original_value() {
 /**
  * A helper function for determining whether or not a component has a valid type.
  *
- * @param array $component
+ * @param array &$component
  *   The component and its types.
  *
  * @return bool
  *   Returns TRUE if type is valid, otherwise FALSE.
  */
-function _uuid_menu_links_features_component_has_valid_type($component) {
+function _uuid_menu_links_features_component_has_valid_type(&$component) {
   if (!empty($component)) {
-    foreach ($component as $name => $items) {
-      for ($i = 0, $items_size = count($items); $i != $items; $i++) {
-        if (in_array($items[$i], array('uuid_node'))) {
+    foreach ($component as $name => &$items) {
+      foreach ($items as $k => &$item) {
+        if (in_array($item, array('uuid_node'))) {
           return TRUE;
         }
       }
