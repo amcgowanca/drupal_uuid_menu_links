@@ -497,8 +497,15 @@ function uuid_menu_links_uuid_node_features_rebuild_alter(&$node, $module) {
         'source'=> $info['node']['menu_path']['prefix'] . '/' . $node->nid,
       ));
     }
+    // If the node doesn't specify whether or not pathauto should run,
+    // forcefully specify that pathauto is disabled for this node.
+    // This will ensure that pathauto does not recreate the path with a different
+    // alias during node_save() at time of creation.
+    if (!isset($node->path['pathauto'])) {
+      $node->path['pathauto'] = FALSE;
+    }
+    // And finally, save the path.
     path_save($node->path);
-    unset($node->path);
   }
 }
 
@@ -506,9 +513,9 @@ function uuid_menu_links_uuid_node_features_rebuild_alter(&$node, $module) {
  * Implements hook_features_rebuild_before().
  */
 function uuid_menu_links_features_rebuild_before($component) {
-  if (module_exists('pathauto')) {
+  if (module_exists('pathauto') && _uuid_menu_links_features_component_has_valid_type($component)) {
     _uuid_menu_links_pathauto_update_action_original_value();
-    variable_get('pathauto_update_action', PATHAUTO_UPDATE_ACTION_NO_NEW);
+    variable_set('pathauto_update_action', PATHAUTO_UPDATE_ACTION_NO_NEW);
   }
 }
 
@@ -516,8 +523,8 @@ function uuid_menu_links_features_rebuild_before($component) {
  * Implements hook_features_rebuild_after().
  */
 function uuid_menu_links_features_rebuild_after($component) {
-  if (module_exists('pathauto')) {
-    variable_get('pathauto_update_action', _uuid_menu_links_pathauto_update_action_original_value());
+  if (module_exists('pathauto') && _uuid_menu_links_features_component_has_valid_type($component)) {
+    variable_set('pathauto_update_action', _uuid_menu_links_pathauto_update_action_original_value());
   }
 }
 
@@ -533,4 +540,26 @@ function _uuid_menu_links_pathauto_update_action_original_value() {
     return $value;
   }
   return NULL;
+}
+
+/**
+ * A helper function for determining whether or not a component has a valid type.
+ *
+ * @param array $component
+ *   The component and its types.
+ *
+ * @return bool
+ *   Returns TRUE if type is valid, otherwise FALSE.
+ */
+function _uuid_menu_links_features_component_has_valid_type($component) {
+  if (!empty($component)) {
+    foreach ($component as $name => $items) {
+      for ($i = 0, $items_size = count($items); $i != $items; $i++) {
+        if (in_array($items[$i], array('uuid_node'))) {
+          return TRUE;
+        }
+      }
+    }
+  }
+  return FALSE;
 }
