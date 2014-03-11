@@ -485,19 +485,21 @@ function uuid_menu_links_uuid_node_features_export_render_alter(&$export, $node,
  * Implements hook_uuid_node_features_rebuild_alter().
  */
 function uuid_menu_links_uuid_node_features_rebuild_alter(&$node, $module) {
-  $info = uuid_menu_links_uuid_menu_links_info();
-  if (!empty($node->uuid)) {
-    path_delete(array(
-      'source' => $info['node']['menu_path']['prefix'] . '/' . $node->uuid,
-    ));
+  if (!empty($node->path)) {
+    $info = uuid_menu_links_uuid_menu_links_info();
+    if (!empty($node->uuid)) {
+      path_delete(array(
+        'source' => $info['node']['menu_path']['prefix'] . '/' . $node->uuid,
+      ));
+    }
+    if (!empty($node->nid)) {
+      path_delete(array(
+        'source'=> $info['node']['menu_path']['prefix'] . '/' . $node->nid,
+      ));
+    }
+    path_save($node->path);
+    unset($node->path);
   }
-  if (!empty($node->nid)) {
-    path_delete(array(
-      'source'=> $info['node']['menu_path']['prefix'] . '/' . $node->nid,
-    ));
-  }
-  path_save($node->path);
-  unset($node->path);
 }
 
 /**
