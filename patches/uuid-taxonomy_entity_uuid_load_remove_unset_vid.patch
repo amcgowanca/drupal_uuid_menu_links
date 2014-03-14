@@ -1,0 +1,12 @@
+diff --git a/uuid.core.inc b/uuid.core.inc
+index e54b556..289a55d 100644
+--- a/uuid.core.inc
++++ b/uuid.core.inc
+@@ -146,7 +146,6 @@ function taxonomy_entity_uuid_load(&$entities, $entity_type) {
+         $uuids = entity_get_uuid_by_id('taxonomy_term', $entity->parent);
+         $entity->parent = array_values($uuids);
+       }
+-      unset($entity->vid);
+     }
+   }
+ }
