@@ -7,12 +7,29 @@
  * Implements hook_module_implements_alter().
  */
 function uuid_menu_links_module_implements_alter(&$implementations, $hook) {
-  if ('menu_alter' === $hook) {
-    // Move UUID Menu Links `menu_alter` implementation to the bottom.
-    $group = $implementations['uuid_menu_links'];
-    unset($implementations['uuid_menu_links']);
-    $implementations['uuid_menu_links'] = $group;
+  switch ($hook) {
+    case 'init':
+      $group = $implementations['uuid_menu_links'];
+      unset($implementations['uuid_menu_links']);
+      $implementations = array('uuid_menu_links' => $group) + $implementations;
+      break;
+
+    case 'menu_alter':
+      // Move UUID Menu Links `menu_alter` implementation to the bottom.
+      $group = $implementations['uuid_menu_links'];
+      unset($implementations['uuid_menu_links']);
+      $implementations['uuid_menu_links'] = $group;
+      break;
   }
+}
+
+/**
+ * Implements hook_init().
+ */
+function uuid_menu_links_init() {
+  // Transform the `current_path` to contain portable identifiers.
+  // TODO: Test all possibilities, as this has unknown side affects.
+  uuid_menu_links_transform_source($_GET['q']);
 }
 
 /**
