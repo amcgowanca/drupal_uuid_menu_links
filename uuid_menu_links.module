@@ -239,12 +239,11 @@ function uuid_menu_links_pathauto_existing_alias_source_alter(&$source) {
  *   Returns the single loaded node by the $identifier if exists, otherwise false.
  */
 function uuid_menu_links_universal_node_load($identifier = NULL) {
-  $node = entity_uuid_load('node', array($identifier));
-  $node = !empty($node) && is_array($node) ? reset($node) : NULL;
-  if (empty($node)) {
-    $node = node_load($identifier);
+  if (!is_numeric($identifier)) {
+    $ids = entity_get_id_by_uuid('node', array($identifier), FALSE);
+    $identifier = !empty($ids[$identifier]) ? $ids[$identifier] : NULL;
   }
-  return $node;
+  return $identifier ? node_load($identifier) : FALSE;
 }
 
 /**
@@ -257,12 +256,11 @@ function uuid_menu_links_universal_node_load($identifier = NULL) {
  *   Returns the single loaded term by the $identifier if exists, otherwise false.
  */
 function uuid_menu_links_universal_taxonomy_term_load($identifier = NULL) {
-  $taxonomy_term = entity_uuid_load('taxonomy_term', array($identifier));
-  $taxonomy_term = !empty($taxonomy_term) && is_array($taxonomy_term) ? reset($taxonomy_term) : NULL;
-  if (empty($taxonomy_term)) {
-    $taxonomy_term = taxonomy_term_load($identifier);
+  if (!is_numeric($identifier)) {
+    $ids = entity_get_id_by_uuid('taxonomy_term', array($identifier), FALSE);
+    $identifier = !empty($ids[$identifier]) ? $ids[$identifier] : NULL;
   }
-  return $taxonomy_term;
+  return $identifier ? taxonomy_term_load($identifier) : FALSE;
 }
 
 /**
@@ -275,12 +273,11 @@ function uuid_menu_links_universal_taxonomy_term_load($identifier = NULL) {
  *   Returns the single loaded file by the $identifier if exists, otherwise false.
  */
 function uuid_menu_links_universal_file_load($identifier = NULL) {
-  $file = entity_uuid_load('file', array($identifier));
-  $file = !empty($file) && is_array($file) ? reset($file) : NULL;
-  if (empty($file)) {
-    $file = file_load($identifier);
+  if (!is_numeric($identifier)) {
+    $ids = entity_get_id_by_uuid('file', array($identifier), FALSE);
+    $identifier = !empty($ids[$identifier]) ? $ids[$identifier] : NULL;
   }
-  return $file;
+  return $identifier ? file_load($identifier) : FALSE;
 }
 
 /**
@@ -293,12 +290,11 @@ function uuid_menu_links_universal_file_load($identifier = NULL) {
  *   Returns the single loaded user by the $identifier if exists, otherwise false.
  */
 function uuid_menu_links_universal_user_load($identifier = NULL) {
-  $user = entity_uuid_load('user', array($identifier));
-  $user = !empty($user) && is_array($user) ? reset($user) : NULL;
-  if (empty($user)) {
-    $user = user_load($identifier);
+  if (!is_numeric($identifier)) {
+    $ids = entity_get_id_by_uuid('user', array($identifier), FALSE);
+    $identifier = !empty($ids[$identifier]) ? $ids[$identifier] : NULL;
   }
-  return $user;
+  return $identifier ? user_load($identifier) : FALSE;
 }
 
 /**
