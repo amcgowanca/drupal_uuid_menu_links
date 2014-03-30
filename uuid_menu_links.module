@@ -537,6 +537,23 @@ function uuid_menu_links_tokens_alter(array &$replacements, array $context) {
 }
 
 /**
+ * Implements hook_url_outbound_alter().
+ */
+function uuid_menu_links_url_outbound_alter(&$path, &$options, $original_path) {
+  // @TODO: Determine if this is appropriate or too intensive.
+  foreach (uuid_menu_links_info() as $entity_type => $info) {
+    if (preg_match('|^' . $info['menu_path']['prefix'] . '/([0-9]+)(/.*)?|', $path, $matches)) {
+      $uuid = entity_get_uuid_by_id($entity_type, array($matches[1]));
+      if (!empty($uuid)) {
+        $path = $info['menu_path']['prefix'] . '/' . $uuid[$matches[1]] . (!empty($matches[2]) ? $matches[2] : '');
+        $path = drupal_get_path_alias($path);
+      }
+      return;
+    }
+  }
+}
+
+/**
  * Updates a menu link to contain the UUID instead of a non-portable identifier.
  *
  * @param array
