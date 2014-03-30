@@ -585,3 +585,57 @@ function _uuid_menu_links_features_component_has_valid_type(&$component) {
   }
   return FALSE;
 }
+
+/**
+ * Implements hook_node_prepare().
+ *
+ * @see path_node_prepare().
+ */
+function uuid_menu_links_node_prepare($node) {
+  // If no menu item loaded, attempt to load based on UUID path
+  // based on menu_node_prepare($node)
+  if (!empty($node->menu) && empty($node->menu['mlid']) && !empty($node->uuid)) {
+    // Prepare the node for the edit form so that $node->menu always exists.
+    $menu_name = strtok(variable_get('menu_parent_' . $node->type, 'main-menu:0'), ':');
+    $item = array();
+    if (isset($node->nid)) {
+      $mlid = FALSE;
+      // Give priority to the default menu
+      $type_menus = variable_get('menu_options_' . $node->type, array('main-menu' => 'main-menu'));
+      if (in_array($menu_name, $type_menus)) {
+        $mlid = db_query_range("SELECT mlid FROM {menu_links} WHERE link_path = :path AND menu_name = :menu_name AND module = 'menu' ORDER BY mlid ASC", 0, 1, array(
+          ':path' => 'node/' . $node->uuid,
+          ':menu_name' => $menu_name,
+        ))->fetchField();
+      }
+      // Check all allowed menus if a link does not exist in the default menu.
+      if (!$mlid && !empty($type_menus)) {
+        $mlid = db_query_range("SELECT mlid FROM {menu_links} WHERE link_path = :path AND module = 'menu' AND menu_name IN (:type_menus) ORDER BY mlid ASC", 0, 1, array(
+          ':path' => 'node/' . $node->uuid,
+          ':type_menus' => array_values($type_menus),
+        ))->fetchField();
+      }
+      if ($mlid) {
+        $item = menu_link_load($mlid);
+      }
+    }
+    // Set default values.
+    $node->menu = $item + array(
+        'link_title' => '',
+        'mlid' => 0,
+        'plid' => 0,
+        'menu_name' => $menu_name,
+        'weight' => 0,
+        'options' => array(),
+        'module' => 'menu',
+        'expanded' => 0,
+        'hidden' => 0,
+        'has_children' => 0,
+        'customized' => 0,
+      );
+  }
+  // Find the depth limit for the parent select.
+  if (!isset($node->menu['parent_depth_limit'])) {
+    $node->menu['parent_depth_limit'] = _menu_parent_depth_limit($node->menu);
+  }
+}
