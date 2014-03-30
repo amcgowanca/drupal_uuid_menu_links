@@ -8,4 +8,3 @@ dependencies[] = node
 dependencies[] = path
 dependencies[] = taxonomy
 dependencies[] = uuid
-dependencies[] = uuid_redirect
