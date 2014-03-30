@@ -20,6 +20,12 @@ function uuid_menu_links_module_implements_alter(&$implementations, $hook) {
       unset($implementations['uuid_menu_links']);
       $implementations['uuid_menu_links'] = $group;
       break;
+
+    case 'tokens_alter':
+      $group = $implementations['uuid_menu_links'];
+      unset($implementations['uuid_menu_links']);
+      $implementations['uuid_menu_links'] = $group;
+      break;
   }
 }
 
@@ -315,91 +321,6 @@ function uuid_menu_links_universal_user_load($identifier = NULL) {
 }
 
 /**
- * Updates a menu link to contain the UUID instead of a non-portable identifier.
- *
- * @param array
- *   The menu link to update.
- */
-function _uuid_menu_links_menu_link_save($link) {
-  $original_link_path = $link['link_path'];
-  uuid_menu_links_transform_source($link['link_path']);
-  if ($original_link_path != $link['link_path']) {
-    menu_link_save($link);
-  }
-}
-
-/**
- * Handles parsing and re-saving of any paths requiring a UUID.
- *
- * @param array $path
- *   The path to resave.
- */
-function _uuid_menu_links_path_save($path) {
-  $original_source = $path['source'];
-  uuid_menu_links_transform_source($path['source']);
-  if ($original_source != $path['source']) {
-    path_save($path);
-  }
-}
-
-/**
- * Handles the menu link synchronization with UUID representations.
- */
-function _uuid_menu_links_sync_menu_links() {
-  $query = db_select('menu_links', 'ml')
-    ->fields('ml')
-    ->condition(_uuid_menu_links_select_build_or('ml.link_path'))
-    ->execute();
-  while ($link = $query->fetch()) {
-    $original = $link->link_path;
-    uuid_menu_links_transform_source($link->link_path);
-    if ($original != $link->link_path) {
-      db_update('menu_links')
-        ->fields(array('link_path' => $link->link_path))
-        ->condition('mlid', $link->mlid)
-        ->execute();
-    }
-  }
-}
-
-/**
- * Handles the path alias synchronization with UUID representations.
- */
-function _uuid_menu_links_sync_path_aliases() {
-  $query = db_select('url_alias', 'p')
-    ->fields('p')
-    ->condition(_uuid_menu_links_select_build_or('p.source'))
-    ->execute();
-  while ($path = $query->fetch()) {
-    $original = $path->source;
-    uuid_menu_links_transform_source($path->source);
-    if ($original != $path->source) {
-      db_update('url_alias')
-        ->fields(array('source' => $path->source))
-        ->condition('pid', $path->pid)
-        ->execute();
-    }
-  }
-}
-
-/**
- * Builds a `db_or()` condition containing path aliases prefixes.
- *
- * @param string $field
- *   The field in which the LIKE comparison should be performed on.
- *
- * @return DatabaseCondition
- *   The combined `db_or()` condition.
- */
-function _uuid_menu_links_select_build_or($field) {
-  $or = db_or();
-  foreach (uuid_menu_links_info() as $info) {
-    $or->condition($field, db_like($info['menu_path']['prefix'] . '/') . '%', 'LIKE');
-  }
-  return $or;
-}
-
-/**
  * Implements hook_form_BASE_FORM_ID_alter() for node_form().
  *
  * Re-implementation of the path module's node_form() alter. This is
@@ -551,45 +472,7 @@ function uuid_menu_links_features_rebuild_after($component) {
 }
 
 /**
- * Stores locally the `pathauto_update_action` variable value.
- */
-function _uuid_menu_links_pathauto_update_action_original_value() {
-  if (module_exists('pathauto')) {
-    static $value = NULL;
-    if (NULL === $value) {
-      $value = variable_get('pathauto_update_action', PATHAUTO_UPDATE_ACTION_DELETE);
-    }
-    return $value;
-  }
-  return NULL;
-}
-
-/**
- * A helper function for determining whether or not a component has a valid type.
- *
- * @param array &$component
- *   The component and its types.
- *
- * @return bool
- *   Returns TRUE if type is valid, otherwise FALSE.
- */
-function _uuid_menu_links_features_component_has_valid_type(&$component) {
-  if (!empty($component)) {
-    foreach ($component as $name => &$items) {
-      foreach ($items as $k => &$item) {
-        if (in_array($item, array('uuid_node'))) {
-          return TRUE;
-        }
-      }
-    }
-  }
-  return FALSE;
-}
-
-/**
  * Implements hook_node_prepare().
- *
- * @see path_node_prepare().
  */
 function uuid_menu_links_node_prepare($node) {
   // If no menu item loaded, attempt to load based on UUID path
@@ -638,4 +521,138 @@ function uuid_menu_links_node_prepare($node) {
   if (!isset($node->menu['parent_depth_limit'])) {
     $node->menu['parent_depth_limit'] = _menu_parent_depth_limit($node->menu);
   }
+}
+
+/**
+ * Implements hook_tokens_alter().
+ */
+function uuid_menu_links_tokens_alter(array &$replacements, array $context) {
+  if ('url' == $context['type'] && isset($context['tokens']['unaliased'])) {
+    uuid_menu_links_transform_source($context['data']['path']);
+    $replacements[$context['tokens']['unaliased']] = url($context['data']['path'], array(
+      'absolute' => TRUE,
+      'alias' => TRUE,
+    ));
+  }
+}
+
+/**
+ * Updates a menu link to contain the UUID instead of a non-portable identifier.
+ *
+ * @param array
+ *   The menu link to update.
+ */
+function _uuid_menu_links_menu_link_save($link) {
+  $original_link_path = $link['link_path'];
+  uuid_menu_links_transform_source($link['link_path']);
+  if ($original_link_path != $link['link_path']) {
+    menu_link_save($link);
+  }
+}
+
+/**
+ * Handles parsing and re-saving of any paths requiring a UUID.
+ *
+ * @param array $path
+ *   The path to resave.
+ */
+function _uuid_menu_links_path_save($path) {
+  $original_source = $path['source'];
+  uuid_menu_links_transform_source($path['source']);
+  if ($original_source != $path['source']) {
+    path_save($path);
+  }
+}
+
+/**
+ * Handles the menu link synchronization with UUID representations.
+ */
+function _uuid_menu_links_sync_menu_links() {
+  $query = db_select('menu_links', 'ml')
+    ->fields('ml')
+    ->condition(_uuid_menu_links_select_build_or('ml.link_path'))
+    ->execute();
+  while ($link = $query->fetch()) {
+    $original = $link->link_path;
+    uuid_menu_links_transform_source($link->link_path);
+    if ($original != $link->link_path) {
+      db_update('menu_links')
+        ->fields(array('link_path' => $link->link_path))
+        ->condition('mlid', $link->mlid)
+        ->execute();
+    }
+  }
+}
+
+/**
+ * Handles the path alias synchronization with UUID representations.
+ */
+function _uuid_menu_links_sync_path_aliases() {
+  $query = db_select('url_alias', 'p')
+    ->fields('p')
+    ->condition(_uuid_menu_links_select_build_or('p.source'))
+    ->execute();
+  while ($path = $query->fetch()) {
+    $original = $path->source;
+    uuid_menu_links_transform_source($path->source);
+    if ($original != $path->source) {
+      db_update('url_alias')
+        ->fields(array('source' => $path->source))
+        ->condition('pid', $path->pid)
+        ->execute();
+    }
+  }
+}
+
+/**
+ * Builds a `db_or()` condition containing path aliases prefixes.
+ *
+ * @param string $field
+ *   The field in which the LIKE comparison should be performed on.
+ *
+ * @return DatabaseCondition
+ *   The combined `db_or()` condition.
+ */
+function _uuid_menu_links_select_build_or($field) {
+  $or = db_or();
+  foreach (uuid_menu_links_info() as $info) {
+    $or->condition($field, db_like($info['menu_path']['prefix'] . '/') . '%', 'LIKE');
+  }
+  return $or;
+}
+
+/**
+ * Stores locally the `pathauto_update_action` variable value.
+ */
+function _uuid_menu_links_pathauto_update_action_original_value() {
+  if (module_exists('pathauto')) {
+    static $value = NULL;
+    if (NULL === $value) {
+      $value = variable_get('pathauto_update_action', PATHAUTO_UPDATE_ACTION_DELETE);
+    }
+    return $value;
+  }
+  return NULL;
+}
+
+/**
+ * A helper function for determining whether or not a component has a valid type.
+ *
+ * @param array &$component
+ *   The component and its types.
+ *
+ * @return bool
+ *   Returns TRUE if type is valid, otherwise FALSE.
+ */
+function _uuid_menu_links_features_component_has_valid_type(&$component) {
+  if (!empty($component)) {
+    foreach ($component as $name => &$items) {
+      foreach ($items as $k => &$item) {
+        if (in_array($item, array('uuid_node'))) {
+          return TRUE;
+        }
+      }
+    }
+  }
+  return FALSE;
 }
