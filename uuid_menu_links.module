@@ -543,12 +543,15 @@ function uuid_menu_links_url_outbound_alter(&$path, &$options, $original_path) {
   // @TODO: Determine if this is appropriate or too intensive.
   foreach (uuid_menu_links_info() as $entity_type => $info) {
     if (preg_match('|^' . $info['menu_path']['prefix'] . '/([0-9]+)(/.*)?|', $path, $matches)) {
-      $uuid = entity_get_uuid_by_id($entity_type, array($matches[1]));
-      if (!empty($uuid)) {
-        $path = $info['menu_path']['prefix'] . '/' . $uuid[$matches[1]] . (!empty($matches[2]) ? $matches[2] : '');
-        $path = drupal_get_path_alias($path);
+      $entity_id = isset($matches[1]) ? ((int) $matches[1]) : FALSE;
+      if ($entity_id) {
+        $uuid = entity_get_uuid_by_id($entity_type, array($entity_id));
+        if (!empty($uuid)) {
+          $path = $info['menu_path']['prefix'] . '/' . $uuid[$entity_id] . (!empty($matches[2]) ? $matches[2] : '');
+          $path = drupal_get_path_alias($path);
+        }
+        return;
       }
-      return;
     }
   }
 }
